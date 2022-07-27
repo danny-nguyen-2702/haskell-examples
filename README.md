@@ -2,6 +2,8 @@
 
 This repository stores examples and exercises that I did during my Haskell language learning
 
+I use this repository as a place to store all of my Haskell exercises, not to track my coding history. So one commit can contain many things.
+
 ## Installation guide
 
 A text editor and a Haskell compiler. You probably already have your favorite text editor installed so we won't waste time on that. For the purposes of this tutorial we'll be using GHC, the most widely used Haskell compiler. The best way to get started is to download the [Haskell Platform](https://www.haskell.org/downloads/), which is basically Haskell with batteries included.
