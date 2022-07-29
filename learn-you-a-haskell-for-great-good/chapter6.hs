@@ -153,3 +153,33 @@ head' = foldr1 (\x _ -> x)
 
 last' :: [a] -> a
 last' = foldl1 (\_ x -> x)
+
+-- scanl and scanr are like foldl and foldr, only they report all the intermediate accumulator states in the form of a list.
+-- ghci> scanl (+) 0 [3,5,2,1]  
+-- [0,3,8,10,11]  
+-- ghci> scanr (+) 0 [3,5,2,1]  
+-- [11,8,3,1,0]  
+-- ghci> scanl (flip (:)) [] [3,2,1]  
+-- [[],[3],[2,3],[1,2,3]]
+
+
+
+
+-- Function application with $
+($) :: (a -> b) -> a -> b  
+f $ x = f x  
+-- When a $ is encountered, the expression on its right is applied as the parameter to the function on its left. We can rewrite this sqrt (3 + 4 + 9) as sqrt $ 3 + 4 + 9
+
+
+
+-- Function composition with .
+(.) :: (b -> c) -> (a -> b) -> a -> c  
+f . g = \x -> f (g x)  
+-- Composition of 2 functions f and g will return a new function which means (f.g) x = f (g x). So the resulting function takes a parameter of the same type that g takes and returns a value of the same type that f returns. The expression negate . (* 3) returns a function that takes a number, multiplies it by 3 and then negates it.
+-- You can take simple functions and use composition as glue to form more complex functions
+
+
+-- If you want to rewrite an expression with a lot of parentheses by using function composition, you can start by putting the last parameter of the innermost function after a $ and then just composing all the other function calls, writing them without their last parameter and putting dots between them
+
+-- replicate 100 (product (map (*3) (zipWith max [1,2,3,4,5] [4,5,6,7,8])))
+-- replicate 100 . product . map (*3) . zipWith max [1,2,3,4,5] $ [4,5,6,7,8]
