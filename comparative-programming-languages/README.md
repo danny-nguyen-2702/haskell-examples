@@ -1,0 +1,6 @@
+# COMPARATIVE PROGRAMMING LANGUAGES
+
+SIMON FRASER UNIVERSITY
+SUMMER 2019 - CMPT 383 D100
+
+Course link: https://www.sfu.ca/outlines.html?2019/summer/cmpt/383/d100
