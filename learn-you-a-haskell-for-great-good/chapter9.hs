@@ -3,8 +3,12 @@
 -- To run a program you can either compile it and then run the produced executable file by doing ghc --make chapter9 and then ./chapter9 or you can use the runhaskell command like so: runhaskell chapter9.hs and your program will be executed on the fly.
 
 import Data.Char ( toUpper )
-import Control.Monad ( when, forever, forM )   
+import Control.Monad ( when, forever, forM )
 import System.IO
+import System.Directory
+import Data.List
+import System.Environment
+
 
 main1 = do
     putStrLn "Enter your name here"
@@ -62,11 +66,11 @@ main4 = do
 -- putChar takes a character and returns an I/O action that will print it out to the terminal. 
 
 -- putStr is actually defined recursively with the help of putChar. The edge condition of putStr is the empty string, so if we're printing an empty string, just return an I/O action that does nothing by using return (). If it's not empty, then print the first character of the string by doing putChar and then print of them using putStr
-putStr' :: String -> IO ()  
-putStr' [] = return ()  
-putStr' (x:xs) = do  
-    putChar x  
-    putStr' xs  
+putStr' :: String -> IO ()
+putStr' [] = return ()
+putStr' (x:xs) = do
+    putChar x
+    putStr' xs
 
 
 -- the print function takes a value of any type that's an instance of Show (meaning that we know how to represent it as a string), calls show with that value to stringify it and then outputs that string to the terminal. Basically, it's just putStrLn . show
@@ -75,16 +79,16 @@ putStr' (x:xs) = do
 
 
 -- The when function is found in Control.Monad (to get access to it, do import Control.Monad). It's interesting because in a do block it looks like a control flow statement, but it's actually a normal function. It takes a boolean value and an I/O action if that boolean value is True, it returns the same I/O action that we supplied to it. However, if it's False, it returns the return (). So as you can see, it's useful for encapsulating the if something then do some I/O action else return () pattern.
-main5 = do  
-    c <- getChar  
-    when (c /= ' ') $ do  
-        putChar c  
-        main5 
-    
+main5 = do
+    c <- getChar
+    when (c /= ' ') $ do
+        putChar c
+        main5
+
 
 -- sequence takes a list of I/O actions and returns an I/O actions that will perform those actions one after the other. The result contained in that I/O action will be a list of the results of all the I/O actions that were performed. Its type signature is sequence :: [IO a] -> IO [a]
-main6 = do  
-    rs <- sequence [getLine, getLine, getLine]  
+main6 = do
+    rs <- sequence [getLine, getLine, getLine]
     print rs
 
 
@@ -105,11 +109,11 @@ ghci> mapM_ print [1,2,3]
 
 
 -- forever takes an I/O action and returns an I/O action that just repeats the I/O action it got forever. It's located in Control.Monad. This little program will indefinitely ask the user for some input and spit it back to him, CAPSLOCKED
-main7 = forever $ do  
-    putStrLn "Give me some input: "  
-    l <- getLine  
-    putStrLn $ map toUpper l  
-    
+main7 = forever $ do
+    putStrLn "Give me some input: "
+    l <- getLine
+    putStrLn $ map toUpper l
+
 
 
 -- forM (located in Control.Monad) is like mapM, only that it has its parameters switched around. The first parameter is the list and the second one is the function to map over that list, which is then sequenced.
@@ -118,7 +122,7 @@ main8 = do
     colors <- forM [1, 2, 3, 4] (\a -> do
         putStrLn $ "Which color do you associate with the number " ++ show a ++ "?"
         getLine)
-    
+
     putStrLn "The colors that you associate with 1, 2, 3 and 4 are: "
     mapM print colors
 -- You can think of forM as meaning: make an I/O action for every element in this list. What each I/O action will do can depend on the element that was used to make the action. Finally, perform those actions and bind their results to something. We don't have to bind it, we can also just throw it away.
@@ -137,7 +141,7 @@ shortLinesOnly input = result
     where result = unlines shortLines
           shortLines = filter (\line -> length line < 10) allLines
           allLines = lines input
-    
+
 
 -- This pattern of getting some string from the input, transforming it with a function and then outputting that is so common that there exists a function which makes that even easier, called interact. interact takes a function of type String -> String as a parameter and returns an I/O action that will take some input, run that function on it and then print out the function's result.
 main10 = interact shortLinesOnly
@@ -202,7 +206,7 @@ main16 = do
 
 -- appendFile has a type signature that's just like writeFile, only appendFile doesn't truncate the file to zero length if it already exists but it appends stuff to it.
 -- Let's say we have a file todo.txt that has one task per line that we have to do. Now let's make a program that takes a line from the standard input and adds that to our to-do list.
-main = do
+main17 = do
     task <- getLine
     appendFile "todo.txt" (task ++ "\n")
 
@@ -211,3 +215,108 @@ main = do
 
 -- We can also use hFlush, which is a function that takes a handle and returns an I/O action that will flush the buffer of the file associated with the handle. When we're doing line-buffering, the buffer is flushed after every line. When we're doing block-buffering, it's after we've read a chunk
 
+
+
+-- We already made a program to add a new item to our to-do list in todo.txt, now let's make a program to remove an item. We'll be using a few new functions from System.Directory and one new function from System.IO
+main18 = do
+    handle <- openFile "todo.txt" ReadMode
+    (tempName, tempHandle) <- openTempFile "." "temp" -- create a temporary file in current directory and its name is temp
+
+    contents <- hGetContents handle
+    let todoTasks = lines contents
+        numberedTasks = zipWith (\n task -> show n ++ " - " ++ task) [0..] todoTasks
+
+    -- Show the todo items for user to choose which one to delete
+    putStrLn "These are your Todo items:"
+    putStrLn $ unlines numberedTasks
+    putStrLn "Which one do you wnat to delete?"
+    numberString <- getLine
+
+    -- delete the choosen item
+    let number = read numberString
+        newTasks = delete (todoTasks !! number) todoTasks -- the delete function from Data.List deletes the first occurence of an element in a list and returns a new list without that occurence
+
+    -- save the new tasks to temporary file
+    hPutStr tempHandle (unlines newTasks)
+
+    hClose handle
+    hClose tempHandle
+
+    -- remove the old todo.txt file and rename the temporary file to todo.txt
+    removeFile "todo.txt"
+    renameFile tempName "todo.txt"
+
+---------------------------------------- Command line arguments ----------------------------------------
+
+-- The System.Environment module has two cool I/O actions. One is getArgs, which has a type of getArgs :: IO [String] and is an I/O action that will get the arguments that the program was run with and have as its contained result a list with the arguments. getProgName has a type of getProgName :: IO String and is an I/O action that contains the program name.
+
+-- Here's a small program that demonstrates how these two work:
+main19 = do
+    args <- getArgs
+    programName <- getProgName
+    putStrLn "The arguments here:"
+    mapM putStrLn args
+    putStrLn "The program name is:"
+    putStrLn programName
+
+
+
+
+
+-- In the previous section, we made a separate program for adding tasks and a separate program for deleting them. Now, we're going to join that into one program, what it does will depend on the command line arguments. We're also going to make it so it can operate on different files, not just todo.txt.
+-- Our program will be made so that if we want to add the task Find the magic sword of power to the file todo.txt, we have to punch in todo add todo.txt "Find the magic sword of power" in our terminal. To view the tasks we'll just do todo view todo.txt and to remove the task with the index of 2, we'll do todo remove todo.txt 2
+-- As an exercise, you can try implementing a bump function that will take a file and a task number and return an I/O action that bumps that task to the top of the to-do list
+dispatch :: [(String, [String] -> IO())]
+dispatch = [
+    ("add", add),
+    ("view", view),
+    ("remove", remove),
+    ("bump", bump)
+    ]
+
+main = do
+    (command:args) <- getArgs
+    let (Just action) = lookup command dispatch
+    action args
+
+
+add :: [String] -> IO ()
+add [fileName, todoItem] = appendFile fileName (todoItem ++ "\n")
+
+view :: [String] -> IO ()
+view [fileName] = do
+    contents <- readFile fileName
+    let todoTasks = lines contents
+        numberedTasks = zipWith (\n task -> show n ++ " - " ++ task) [0..] todoTasks
+
+    putStr $ unlines numberedTasks
+
+remove :: [String] -> IO ()
+remove [fileName, numberString] = do
+    handle <- openFile fileName ReadMode
+    (tempName, tempHandle) <- openTempFile "." "temp"
+    contents <- hGetContents handle
+    let taskNumber = read numberString
+        tasks = lines contents
+        newTasks = delete (tasks !! taskNumber) tasks
+    hPutStr tempHandle $ unlines newTasks
+    hClose handle
+    hClose tempHandle
+    removeFile fileName
+    renameFile tempName fileName
+
+bump :: [String] -> IO ()
+bump [fileName, numberString] = do
+    handle <- openFile fileName ReadMode
+    (tempName, tempHandle) <- openTempFile "." "temp"
+    contents <- hGetContents handle
+    
+    let taskNumber = read numberString
+        tasks = lines contents
+        newTasks = (tasks !! taskNumber) : filter (/= tasks !! taskNumber) tasks
+    
+    hPutStr tempHandle $ unlines newTasks
+    hClose handle
+    hClose tempHandle
+    removeFile fileName
+    renameFile tempName fileName
