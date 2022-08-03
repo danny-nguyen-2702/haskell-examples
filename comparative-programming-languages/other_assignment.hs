@@ -12,3 +12,11 @@ sortByAppearance [] = []
 sortByAppearance ((k, v):xs) = biggers ++ [(k, v)] ++ smallers
     where biggers = sortByAppearance $ filter (\(k', v') -> v' >= v) xs
           smallers = sortByAppearance $ filter (\(k', v') -> v' < v) xs
+
+
+-- Second solution (don't use Map data structure)
+unorderedCount :: String -> [(Char, Int)]
+unorderedCount "" = []
+unorderedCount (c:xs) = (c,succ $ length $ filter (==c) xs):orderedCount (filter (/=c) xs)
+
+
