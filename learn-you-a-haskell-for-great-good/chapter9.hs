@@ -2,12 +2,23 @@
 
 -- To run a program you can either compile it and then run the produced executable file by doing ghc --make chapter9 and then ./chapter9 or you can use the runhaskell command like so: runhaskell chapter9.hs and your program will be executed on the fly.
 
-import Data.Char ( toUpper )
+import Data.Char ( toUpper, digitToInt )
 import Control.Monad ( when, forever, forM )
 import System.IO
-import System.Directory
-import Data.List
-import System.Environment
+    ( hClose,
+      openFile,
+      hGetContents,
+      hPutStr,
+      openTempFile,
+      withFile,
+      Handle,
+      IOMode(ReadMode) )
+import System.IO.Error
+import System.Directory ( removeFile, renameFile )
+import Data.List ( delete )
+import System.Environment ( getArgs, getProgName )
+import Control.Exception
+import Distribution.Simple.Program.HcPkg (list)
 
 
 main1 = do
@@ -274,7 +285,7 @@ dispatch = [
     ("bump", bump)
     ]
 
-main = do
+main20 = do
     (command:args) <- getArgs
     let (Just action) = lookup command dispatch
     action args
@@ -310,13 +321,38 @@ bump [fileName, numberString] = do
     handle <- openFile fileName ReadMode
     (tempName, tempHandle) <- openTempFile "." "temp"
     contents <- hGetContents handle
-    
+
     let taskNumber = read numberString
         tasks = lines contents
         newTasks = (tasks !! taskNumber) : filter (/= tasks !! taskNumber) tasks
-    
+
     hPutStr tempHandle $ unlines newTasks
     hClose handle
     hClose tempHandle
     removeFile fileName
     renameFile tempName fileName
+
+
+
+---------------------------------------- Exceptions ----------------------------------------
+
+-- Haskell has a very good type system. Algebraic data types allow for types like Maybe and Either and we can use values of those types to represent results that may be there or not. A function a -> Maybe b clearly indicates that it it may produce a b wrapped in Just or that it may return Nothing
+-- Despite having expressive types that support failed computations, Haskell still has support for exceptions, because they make more sense in I/O contexts. A lot of things can go wrong when dealing with the outside world because it is so unreliable.
+-- Okay, so I/O code (i.e. impure code) can throw exceptions. It makes sense. But what about pure code? Well, it can throw exceptions too. Think about the div and head functions. They have types of (Integral a) => a -> a -> a and [a] -> a, respectively. No Maybe or Either in their return type and yet they can both fail! 
+-- Pure code can throw exceptions, but they can only be caught in the I/O part of our code (when we're inside a do block that goes into main). If we don't catch exceptions in the I/O part of our code, our program crashes. The solution? Don't mix exceptions and pure code. Take advantage of Haskell's powerful type system and use types like Either and Maybe to represent results that may have failed.
+-- That's why we'll just be looking at how to use I/O exceptions for now. I/O exceptions are exceptions that are caused when something goes wrong while we are communicating with the outside world in an I/O action that's part of main. For example, we can try opening a file and then it turns out that the file has been deleted or something.
+
+-- Take a look at this program that opens a file whose name is given to it as a command line argument and tells us how many lines the file has. We use catch to handle exceptions. The type of catch is catch :: IO a -> (IOError -> IO a) -> IO a
+-- main = tryOpenFile `catch` handler
+
+tryOpenFile :: IO ()
+tryOpenFile = do
+    (fileName:_) <- getArgs
+    contents <- readFile fileName
+    putStrLn $ "The file has " ++ (show . length . lines) contents ++ " lines!"
+
+handler :: IOError -> IO ()
+handler e 
+    | isDoesNotExistError e = putStrLn "The file doesn't exist!"
+    | otherwise = ioError e -- ioError takes an IOError and produces an I/O action that will throw it
+
