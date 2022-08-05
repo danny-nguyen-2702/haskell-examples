@@ -27,3 +27,9 @@ findFactors n =  factor : findFactors (n `div` factor)
     where factor = head [x | x <- [2..n], n `mod` x == 0]
 
 -- test = all (all isPrime . findFactors) [20000..50000]
+
+findFactors2 :: Int -> [(Int, Int)]
+findFactors2 1 = []
+findFactors2 n =  (factor, power) : findFactors2 (n `div` factor ^ power)
+    where factor = head [x | x <- [2..n], n `mod` x == 0]
+          power = last $ takeWhile (\p -> n `mod` factor ^ p == 0) [1..]
