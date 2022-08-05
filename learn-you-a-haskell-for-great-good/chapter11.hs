@@ -1,7 +1,7 @@
 --------------------------------- Functors, Applicative Functors and Monoids ---------------------------------
 import System.IO
 
--------- Functors redux
+-------- Functors redux --------
 
 --  Functors are things that can be mapped over, like lists, Maybes, trees, and such. In Haskell, they're described by the typeclass Functor, which has only one typeclass method, namely fmap, which has a type of fmap :: (a -> b) -> f a -> f b. It says: give me a function that takes an a and returns a b and a box with an a (or several of them) inside it and I'll give you a box with a b (or several of them) inside it. It kind of applies the function to the element inside the box.
 
@@ -64,7 +64,7 @@ instance Functor' ((->) r) where
 
 
 
--------- Applicative functors
+-------- Applicative functors --------
 
 -- So far, when we were mapping functions over functors, we usually mapped functions that take only one parameter. But what happens when we map a function like *, which takes two parameters, over a functor?
 --  Let's take a look at a couple of concrete examples of this. If we have Just 3 and we do fmap (*) (Just 3), what do we get? From the instance implementation of Maybe for Functor, we know that if it's a Just something value, it will apply the function to the something inside the Just. Therefore, doing fmap (*) (Just 3) results in Just ((*) 3), which can also be written as Just (* 3) if we use sections. Interesting! We get a function wrapped in a Just!
@@ -182,6 +182,86 @@ myAction2 = (++) Prelude.<$> getLine Prelude.<*> getLine
 
 
 
--------- The newtype keyword
+-------- The newtype keyword --------
 
 -- So far, we've learned how to make our own algebraic data types by using the data keyword. We've also learned how to give existing types synonyms with the type keyword. In this section, we'll be taking a look at how to make new types out of existing data types by using the newtype keyword and why we'd want to do that in the first place.
+
+-- Well, think about how we might write the data declaration for our ZipList a type. One way would be to do it like so:
+
+-- data ZipList a = ZipList [a] 
+
+-- A type that has just one value constructor and that value constructor has just one field that is a list of things. We might also want to use record syntax so that we automatically get a function that extracts a list from a ZipList
+
+-- data ZipList a = ZipList { getZipList :: [a] }  
+
+-- This looks fine and would actually work pretty well. We had two ways of making an existing type an instance of a type class, so we used the data keyword to just wrap that type into another type and made the other type an instance in the second way.
+
+-- The newtype keyword in Haskell is made exactly for these cases when we want to just take one type and wrap it in something to present it as another type. In the actual libraries, ZipList a is defined like this:
+
+-- newtype ZipList a = ZipList { getZipList :: [a] } 
+
+-- newtype is usually faster than data. When using newtype, you're restricted to just one constructor with one field.
+
+-- If you just want your type signatures to look cleaner and be more descriptive, you probably want type synonyms. If you want to take an existing type and wrap it in a new type in order to make it an instance of a type class, chances are you're looking for a newtype. And if you want to make something completely new, odds are good that you're looking for the data keyword.
+
+
+
+-------- Monoids --------
+
+-- * function and ++ function have some common properties:
+--      The function takes two parameters.
+--      The parameters and the returned value have the same type.
+--      There exists such a value that doesn't change other values when used with the binary function. For example: value 1 in * function and value [] in ++ function because x * 1 = x and xs ++ [] = xs
+
+-- A monoid is when you have an associative binary function and a value which acts as an identity with respect to that function. When something acts as an identity with respect to a function, it means that when called with that function and some other value, the result is always equal to that other value
+
+-- There are a lot of other monoids to be found in the world of Haskell, which is why the Monoid type class exists. It's for types which can act like monoids. Let's see how the type class is defined:
+
+class Monoid' m where  
+    mempty :: m  
+    mappend :: m -> m -> m  
+    mconcat :: [m] -> m  
+    mconcat = foldr Main.mappend Main.mempty  
+
+-- First of all, we see that only concrete types can be made instances of Monoid
+-- The first function is mempty. It's not really a function, since it doesn't take parameters, so it's a polymorphic constant, kind of like minBound from Bounded. mempty represents the identity value for a particular monoid.
+-- Next up, we have mappend, which, as you've probably guessed, is the binary function. It takes two values of the same type and returns a value of that type as well
+-- The last function in this type class definition is mconcat. It takes a list of monoid values and reduces them to a single value by doing mappend between the list's elements.
+
+-- Before moving on to specific instances of Monoid, let's take a brief look at the monoid laws.
+--      mempty `mappend` x = x
+--      x `mappend` mempty = x
+--      (x `mappend` y) `mappend` z = x `mappend` (y `mappend` z)
+
+
+-- Lists are monoids
+instance Monoid' [a] where  
+    mempty = []  
+    mappend = (++)  
+
+-- ghci> "pang" `mappend` mempty  
+-- "pang"    
+-- ghci> ("one" `mappend` "two") `mappend` "tree"  
+-- "onetwotree"  
+-- ghci> "one" `mappend` ("two" `mappend` "tree")  
+-- "onetwotree"  
+-- ghci> mconcat [[1,2],[3,6],[9]]  
+-- [1,2,3,6,9] 
+-- ghci> mempty :: [a]  
+-- [] 
+
+
+-- Product and Sum 
+-- So there are two equally valid ways for numbers to be monoids, which way do choose? Well, we don't have to.  Remember, when there are several ways for some type to be an instance of the same type class, we can wrap that type in a newtype and then make the new type an instance of the type class in a different way.
+
+newtype Product a =  Product { getProduct :: a }  
+    deriving (Eq, Ord, Read, Show, Bounded)  
+
+instance Num a => Monoid' (Product a) where  
+    mempty = Product 1  
+    Product x `mappend` Product y = Product (x * y)  
+
+-- ghci> getProduct $ Product 3 `mappend` Product 9  
+-- 27  
+-- ghci> getProduct $ Product 3 `mappend` mempty  
+-- 3 
