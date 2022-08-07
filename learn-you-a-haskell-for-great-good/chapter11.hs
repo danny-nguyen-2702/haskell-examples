@@ -177,6 +177,8 @@ myAction2 = (++) Prelude.<$> getLine Prelude.<*> getLine
 
 
 
+-- When we first talked about functors, we saw that they were a useful concept for values that can be mapped over. Then, we took that concept one step further by introducing applicative functors, which allow us to view values of certain data types as values with contexts and use normal functions on those values while preserving the meaning of those contexts.
+
 -- Applicative functors are more powerful than just ordinary functors. With ordinary functors, we can just map functions over one functor. But with applicative functors, we can apply a function between several functors.
 
 
