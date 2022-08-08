@@ -231,8 +231,10 @@ flattenAgain = flatMap id
 seqOptional ::
   List (Optional a)
   -> Optional (List a)
-seqOptional =
-  error "todo: Course.List#seqOptional"
+seqOptional xs = foldRight handle (Full Nil) xs
+  where handle Empty _ = Empty
+        handle _ Empty = Empty
+        handle (Full x) (Full xs) = Full (x :. xs)
 
 -- | Find the first element in the list matching the predicate.
 --
@@ -254,8 +256,7 @@ find ::
   (a -> Bool)
   -> List a
   -> Optional a
-find =
-  error "todo: Course.List#find"
+find f = foldRight (\x acc -> if f x then Full x else acc) Empty
 
 -- | Determine if the length of the given list is greater than 4.
 --
@@ -273,8 +274,7 @@ find =
 lengthGT4 ::
   List a
   -> Bool
-lengthGT4 =
-  error "todo: Course.List#lengthGT4"
+lengthGT4 xs = (length . take 5 $ xs) > 4
 
 -- | Reverse a list.
 --
@@ -286,12 +286,13 @@ lengthGT4 =
 --
 -- prop> \x -> let types = x :: List Int in reverse x ++ reverse y == reverse (y ++ x)
 --
+
+
 -- prop> \x -> let types = x :: Int in reverse (x :. Nil) == x :. Nil
 reverse ::
   List a
   -> List a
-reverse =
-  error "todo: Course.List#reverse"
+reverse = foldLeft (flip (:.)) Nil 
 
 -- | Produce an infinite `List` that seeds with the given value at its head,
 -- then runs the given function for subsequent elements
@@ -305,8 +306,7 @@ produce ::
   (a -> a)
   -> a
   -> List a
-produce f x =
-  error "todo: Course.List#produce"
+produce f x = x :. produce f (f x)
 
 -- | Do anything other than reverse a list.
 -- Is it even possible?
@@ -320,8 +320,7 @@ produce f x =
 notReverse ::
   List a
   -> List a
-notReverse =
-  error "todo: Is it even possible?"
+notReverse = reverse -- yeah! like I guess, it's impossible
 
 ---- End of list exercises
 
