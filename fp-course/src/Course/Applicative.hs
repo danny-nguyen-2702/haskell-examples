@@ -49,11 +49,12 @@ instance Applicative ExactlyOne where
     a
     -> ExactlyOne a
   pure = ExactlyOne
+
   (<*>) ::
     ExactlyOne (a -> b)
     -> ExactlyOne a
     -> ExactlyOne b
-  ExactlyOne f <*> a = f <$> a
+  (<*>) (ExactlyOne f) (ExactlyOne a) = ExactlyOne (f a)
 
 -- | Insert into a List.
 --
@@ -70,8 +71,7 @@ instance Applicative List where
     List (a -> b)
     -> List a
     -> List b
-  Nil <*> _ = Nil
-  fs <*> xs = flatten $ foldRight (\f acc -> (f <$> xs) :. acc) Nil fs
+  (<*>) fs xs = flatten $ foldRight (\f acc -> (f <$> xs) :. acc) Nil fs
 
 -- | Insert into an Optional.
 --
@@ -94,8 +94,9 @@ instance Applicative Optional where
     Optional (a -> b)
     -> Optional a
     -> Optional b
-  Empty <*> _ = Empty
-  Full f <*> something = f <$> something
+  (<*>) Empty _ = Empty
+  (<*>) _ Empty = Empty
+  (<*>) (Full f) (Full x) = Full (f x)
 
 -- | Insert into a constant function.
 --
@@ -119,12 +120,12 @@ instance Applicative ((->) t) where
   pure ::
     a
     -> ((->) t a)
-  pure x = (\_ -> x)
+  pure a = \t -> a
   (<*>) ::
     ((->) t (a -> b))
     -> ((->) t a)
     -> ((->) t b)
-  f <*> g = \x -> f x (g x)
+  (<*>) f g = \t -> let a = g t in f t a
 
 
 -- | Apply a binary function in the environment.
@@ -152,7 +153,7 @@ lift2 ::
   -> k a
   -> k b
   -> k c
-lift2 f a b = f <$> a <*> b
+lift2  f ka kb = f <$> ka <*> kb
 
 -- | Apply a ternary function in the environment.
 -- /can be written using `lift2` and `(<*>)`./
@@ -184,7 +185,7 @@ lift3 ::
   -> k b
   -> k c
   -> k d
-lift3 f a b c = lift2 f a b <*> c
+lift3 f ka kb kc = lift2 f ka kb <*> kc
 
 -- | Apply a quaternary function in the environment.
 -- /can be written using `lift3` and `(<*>)`./
@@ -217,14 +218,15 @@ lift4 ::
   -> k c
   -> k d
   -> k e
-lift4 f a b c d = lift3 f a b c <*> d
+lift4 f ka kb kc kd = lift3 f ka kb kc <*> kd
+  
 
 -- | Apply a nullary function in the environment.
 lift0 ::
   Applicative k =>
   a
   -> k a
-lift0 = pure 
+lift0 = pure
 
 -- | Apply a unary function in the environment.
 -- /can be written using `lift0` and `(<*>)`./
@@ -267,7 +269,7 @@ lift1 = (<$>)
   k a
   -> k b
   -> k b
-(*>) a b = pure (\_ y -> y) <*> a <*> b
+(*>) ka kb = (\a b -> b) <$> ka <*> kb
 
 -- | Apply, discarding the value of the second argument.
 -- Pronounced, left apply.
@@ -292,7 +294,7 @@ lift1 = (<$>)
   k b
   -> k a
   -> k b
-(<*) a b = const <$> a <*> b
+(<*) ka kb = (\a b -> a) <$> ka <*> kb
 
 -- | Sequences a list of structures to a structure of list.
 --
@@ -310,12 +312,11 @@ lift1 = (<$>)
 --
 -- >>> sequence ((*10) :. (+2) :. Nil) 6
 -- [60,8]
-
 sequence ::
   Applicative k =>
   List (k a)
   -> k (List a)
-sequence = foldRight (\x acc -> (:.) <$> x <*> acc) (pure Nil)
+sequence = foldRight (lift2 (:.)) (pure Nil) -- sequence xs = foldRight (\x acc -> lift2 (:.) x acc) (pure Nil) xs
 
 -- | Replicate an effect a given number of times.
 --
@@ -340,8 +341,7 @@ replicateA ::
   Int
   -> k a
   -> k (List a)
-replicateA =
-  error "todo: Course.Applicative#replicateA"
+replicateA n ka = replicate n <$> ka
 
 -- | Filter a list with a predicate that produces an effect.
 --
