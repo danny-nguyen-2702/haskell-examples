@@ -77,7 +77,7 @@ headOr ::
   -> List a
   -> a
 headOr a Nil = a
-headOr _ (x :. xs) = x
+headOr _ (x:.xs) = x
 
 -- | The product of the elements of a list.
 --
@@ -92,7 +92,7 @@ headOr _ (x :. xs) = x
 product ::
   List Int
   -> Int
-product = foldLeft (*) 1
+product = foldRight (*) 1 
 
 -- | Sum the elements of the list.
 --
@@ -106,7 +106,7 @@ product = foldLeft (*) 1
 sum ::
   List Int
   -> Int
-sum = foldLeft (+) 0
+sum = foldRight (+) 0
 
 -- | Return the length of the list.
 --
@@ -117,7 +117,7 @@ sum = foldLeft (+) 0
 length ::
   List a
   -> Int
-length = foldLeft (\acc _ -> acc + 1) 0
+length = foldRight (\x acc -> acc + 1) 0
 
 -- | Map the given function on each element of the list.
 --
@@ -132,6 +132,7 @@ map ::
   -> List a
   -> List b
 map f = foldRight (\x acc -> f x :. acc) Nil
+
 -- | Return elements satisfying the given predicate.
 --
 -- >>> filter even (1 :. 2 :. 3 :. 4 :. 5 :. Nil)
@@ -164,7 +165,7 @@ filter f = foldRight (\x acc -> if f x then x :. acc else acc) Nil
   List a
   -> List a
   -> List a
-(++) xs ys = foldRight (\x acc -> x :. acc) ys xs
+(++) xs ys = foldRight (:.) ys xs
 
 infixr 5 ++
 
@@ -181,8 +182,7 @@ infixr 5 ++
 flatten ::
   List (List a)
   -> List a
-flatten Nil = Nil
-flatten (x:.xs) = foldRight (:.) (flatten xs) x
+flatten = foldRight (++) Nil
 
 -- | Map a function then flatten to a list.
 --
@@ -198,7 +198,7 @@ flatMap ::
   (a -> List b)
   -> List a
   -> List b
-flatMap f xs = flatten (map f xs)
+flatMap f = flatten . map f
 
 -- | Flatten a list of lists to a list (again).
 -- HOWEVER, this time use the /flatMap/ function that you just wrote.
@@ -231,10 +231,7 @@ flattenAgain = flatMap id
 seqOptional ::
   List (Optional a)
   -> Optional (List a)
-seqOptional xs = foldRight handle (Full Nil) xs
-  where handle Empty _ = Empty
-        handle _ Empty = Empty
-        handle (Full x) (Full xs) = Full (x :. xs)
+seqOptional = foldRight (twiceOptional(:.)) (P.pure Nil)
 
 -- | Find the first element in the list matching the predicate.
 --
@@ -256,7 +253,8 @@ find ::
   (a -> Bool)
   -> List a
   -> Optional a
-find f = foldRight (\x acc -> if f x then Full x else acc) Empty
+find f xs = headOr Empty (map P.pure (filter f xs))
+
 
 -- | Determine if the length of the given list is greater than 4.
 --
@@ -274,7 +272,7 @@ find f = foldRight (\x acc -> if f x then Full x else acc) Empty
 lengthGT4 ::
   List a
   -> Bool
-lengthGT4 xs = (length . take 5 $ xs) > 4
+lengthGT4 xs = length (take 5 xs) > 4
 
 -- | Reverse a list.
 --
@@ -286,8 +284,6 @@ lengthGT4 xs = (length . take 5 $ xs) > 4
 --
 -- prop> \x -> let types = x :: List Int in reverse x ++ reverse y == reverse (y ++ x)
 --
-
-
 -- prop> \x -> let types = x :: Int in reverse (x :. Nil) == x :. Nil
 reverse ::
   List a
@@ -320,7 +316,8 @@ produce f x = x :. produce f (f x)
 notReverse ::
   List a
   -> List a
-notReverse = reverse -- yeah! like I guess, it's impossible
+notReverse =
+  error "todo: Is it even possible?"
 
 ---- End of list exercises
 
