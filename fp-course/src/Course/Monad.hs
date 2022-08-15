@@ -47,8 +47,7 @@ instance Monad List where
     (a -> List b)
     -> List a
     -> List b
-  (=<<) f Nil = Nil
-  (=<<) f (x:.xs) = f x ++ (f =<< xs)
+  (=<<) f xs = foldRight (\x acc -> f x ++ acc) Nil xs
 
 -- | Binds a function on an Optional.
 --
@@ -59,8 +58,7 @@ instance Monad Optional where
     (a -> Optional b)
     -> Optional a
     -> Optional b
-  (=<<) f Empty = Empty
-  (=<<) f (Full x) = f x
+  (=<<) = bindOptional
 
 -- | Binds a function on the reader ((->) t).
 --
@@ -71,7 +69,7 @@ instance Monad ((->) t) where
     (a -> ((->) t b))
     -> ((->) t a)
     -> ((->) t b)
-  (=<<) f g = \x -> f (g x) x
+  (=<<) f g = \t -> let a = g t in f a t
 
 -- | Witness that all things with (=<<) and (<$>) also have (<*>).
 --
@@ -109,7 +107,11 @@ instance Monad ((->) t) where
   k (a -> b)
   -> k a
   -> k b
-(<**>) f a = f <*> a
+(<**>) kf ka = 
+  kf >>= \f' ->
+  ka >>= \a' ->
+  pure (f' a')
+
 
 infixl 4 <**>
 
@@ -130,7 +132,7 @@ join ::
   Monad k =>
   k (k a)
   -> k a
-join xss = id =<< xss 
+join kka = id =<< kka
 
 -- | Implement a flipped version of @(=<<)@, however, use only
 -- @join@ and @(<$>)@.
@@ -143,7 +145,7 @@ join xss = id =<< xss
   k a
   -> (a -> k b)
   -> k b
-(>>=) a f = join (f <$> a)
+(>>=) ka f = join (f <$> ka)
 
 infixl 1 >>=
 
@@ -158,7 +160,7 @@ infixl 1 >>=
   -> (a -> k b)
   -> a
   -> k c
-(<=<) f g a = f =<< g a
+(<=<) f g a = g a >>= f
 
 infixr 1 <=<
 
