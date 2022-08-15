@@ -341,7 +341,7 @@ replicateA ::
   Int
   -> k a
   -> k (List a)
-replicateA n ka = replicate n <$> ka
+replicateA n ka = sequence (replicate n ka)
 
 -- | Filter a list with a predicate that produces an effect.
 --
@@ -368,8 +368,8 @@ filtering ::
   (a -> k Bool)
   -> List a
   -> k (List a)
-filtering =
-  error "todo: Course.Applicative#filtering"
+filtering f = foldRight (\x acc -> handle <$> pure x <*> f x <*> acc) (pure Nil)
+  where handle x rs xs = if rs then x:.xs else xs
 
 -----------------------
 -- SUPPORT LIBRARIES --
