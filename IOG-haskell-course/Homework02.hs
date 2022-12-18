@@ -37,6 +37,7 @@ VD: nếu chúng ta thấy một hàm f với signature là f :: a -> a thì ch�
 -- Question 3
 -- Why should you define type signatures for variables? How can they help you?
 
+-- Để giúp compiler hiểu được type của variable mà chúng ta muốn, từ đó đưa ra các cảnh báo nếu chúng ta viết function không phù hợp với type đã khai báo
 
 -- Question 4
 -- Are there any functions in Haskell that let you transform one type to the other? Try googling for the answer.
