@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+import Data.Char (toUpper)
 
 data Price = Price Integer deriving (Show, Eq)
 
@@ -127,3 +128,53 @@ insertTree x (Node left y right)
 mapTree :: (a -> b) -> BinaryTree a -> BinaryTree b
 mapTree _ Leaf = Leaf
 mapTree f (Node left x right) = Node (mapTree f left) (f x) (mapTree f right)
+
+-- Write functions to convert BinaryTree values to lists
+preorder :: BinaryTree a -> [a]
+preorder Leaf = []
+preorder (Node left x right) = [x] ++ preorder left ++ preorder right
+
+inorder :: BinaryTree a -> [a]
+inorder Leaf = []
+inorder (Node left x right) = preorder left ++ [x] ++ preorder right
+
+postorder :: BinaryTree a -> [a]
+postorder Leaf = []
+postorder (Node left x right) = preorder right ++ [x] ++ preorder left
+
+testTree :: BinaryTree Integer
+testTree = Node (Node Leaf 1 Leaf) 2 (Node Leaf 3 Leaf)
+
+
+-- Write foldr for BinaryTree
+foldTree :: (a -> b -> b) -> b -> BinaryTree a -> b
+foldTree _ acc Leaf = acc
+foldTree f acc (Node left x right) = foldTree f (f x (foldTree f acc right)) left
+
+foldTree' :: (a -> b -> b) -> b -> BinaryTree a -> b
+foldTree' f acc tree = foldr f acc (inorder tree)
+
+
+-- Use as-patterns in implementing the following functions
+
+-- 1. This should return True if (and only if) all the values in the first list appear in the second list, though they need not be contiguous. Remember that the sub-sequence has to be in the original order!
+isSubseqOf :: (Eq a) => [a] -> [a] -> Bool
+isSubseqOf [] _ = True
+isSubseqOf _ [] = False
+isSubseqOf allX@(x:xs) (y:ys) 
+    | x == y = isSubseqOf xs ys
+    | otherwise = isSubseqOf allX ys
+
+-- 2. Split a sentence into words, then tuple each word with the capitalized form of each
+capitalizeWords :: String -> [(String, String)]
+capitalizeWords str = map (\word@(x:xs) -> (word, toUpper x : xs)) $ words str
+
+
+
+-- Language exercises
+-- 1. Write a function that capitalizes a word.
+capitalizeWord :: String -> String
+capitalizeWord "" = ""
+capitalizeWord (x:xs) = toUpper x : xs
+
+-- 2. Write a function that capitalizes sentences in a paragraph. Recognize when a new sentence has begun by checking for periods. Reuse the capitalizeWord function
